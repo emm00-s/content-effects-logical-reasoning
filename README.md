@@ -11,7 +11,7 @@ This repository accompanies:
 
 ## Key results
 
-Models: `Qwen/Qwen2.5-3B-Instruct` and `meta-llama/Llama-3.2-3B-Instruct`, 36 puzzles x 10 seeds, temperature 0.7, top-p 1.0. Chance level is 25%. Intervals are 95% cluster-bootstrap CIs over puzzles.
+Models: `Qwen/Qwen2.5-3B-Instruct` and `meta-llama/Llama-3.2-3B-Instruct`, 36 puzzles x 10 seeds, temperature 0.7, top-p 1.0. 
 
 | | Qwen2.5-3B | Llama-3.2-3B |
 | --- | --- | --- |
