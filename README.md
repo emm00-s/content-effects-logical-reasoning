@@ -130,4 +130,6 @@ AI coding assistants (Claude Code) were used in developing this repository. All 
 
 ## License
 
-Code: MIT. Puzzle data (`puzzles/`) and span annotations (`attention/selected_spans_*.json`): CC BY 4.0. See `LICENSE`.
+## License
+
+The code is released under the MIT License (see `LICENSE`). The benchmark data (`puzzles/`), the span annotations (`attention/selected_spans_*.json`) and the released results and figures (`results/`, `figures/`, `attention_outputs/`) are released under CC BY 4.0.
