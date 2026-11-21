@@ -126,7 +126,7 @@ See [`docs/reproducibility.md`](docs/reproducibility.md) for the exact commands 
 
 ## AI assistance
 
-Parts of the code in this repository were written with AI coding assistants (Claude, Codex, Copilot), as visible in the commit history. Research design, puzzle construction, annotation and interpretation of results are the author's.
+AI coding assistants (Claude Code) were used in developing this repository. All changes were reviewed by the authors. Research design, puzzle construction, annotation and interpretation of results are the authors'.
 
 ## License
 
