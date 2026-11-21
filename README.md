@@ -1,164 +1,133 @@
-# LLM Symbolic Reasoning Thesis
+# When Content Overrides Form: Logical Invariance in Small Instruction-Tuned LLMs
 
-Controlled diagnostic benchmark for evaluating logical invariance in language models under narrative variation.
+Code, data and results for a controlled diagnostic benchmark that tests whether small instruction-tuned language models keep the same logical judgment when the same formal problem is wrapped in different narratives.
 
-## Project structure
+Each of 9 propositional templates is verified with the Z3 SMT solver and rendered in 4 narrative variants (familiar, belief-violating, artificial, abstract). Models answer in a counterbalanced four-option forced-choice format (True / False / Unknown / Paradox), and the pipeline adds confidence, positional-bias and attention diagnostics on top of accuracy.
 
-- `puzzles/puzzles.json`: natural-language puzzle variants
-- `puzzles/templates.json`: formal templates, gold labels, and Z3 verification code
-- `src/dataset.py`: loads and joins puzzles with templates
-- `src/solvers.py`: verifies gold labels with Z3
-- `src/prompt.py`: builds A/B/C/D prompts under a per-trial option-letter permutation and parses answers
-- `src/model.py`: wraps Qwen-2.5-3B-Instruct and samples answers from the model distribution over A/B/C/D
-- `src/run.py`: runs repeated sampled evaluations under systematic counterbalancing
-- `src/analyze.py`: computes accuracy, majority vote, stability, cross-variant consistency, positional diagnostics, and confidence diagnostics
+This repository accompanies:
 
-## Dataset
+- **MSc thesis:** *Logical Reasoning and Failure Diagnostics in Small Instruction-Tuned Language Models*, Emmanuel Giuseppe Santoro. MSc in Human-Centered Artificial Intelligence (joint programme of the Universities of Milan, Milano-Bicocca and Pavia), A.Y. 2025-2026. Supervisor: Prof. Rafael Peñaloza. Co-supervisor: Prof. Giuseppe Primiero.
+- **Paper:** E. G. Santoro and R. Peñaloza, *When Content Overrides Form: Diagnosing Logical Failures in Small Instruction-Tuned Language Models*. FOUSY 2026, Workshop on Foundations of Neuro-Symbolic Logical Reasoning (co-located with TriCoLore), Brixen/Bressanone, December 2026. CEUR Workshop Proceedings, to appear.
 
-The benchmark contains:
+## Key results
 
-- 9 logical templates
-- 4 variants per template
-- 36 total puzzles
+Models: `Qwen/Qwen2.5-3B-Instruct` and `meta-llama/Llama-3.2-3B-Instruct`, 36 puzzles x 10 seeds, temperature 0.7, top-p 1.0. Chance level is 25%. Intervals are 95% cluster-bootstrap CIs over puzzles.
 
-The four variant types are:
+| | Qwen2.5-3B | Llama-3.2-3B |
+| --- | --- | --- |
+| Sampled accuracy | 34.2% [22.2, 46.9] | 25.6% [19.7, 32.5] |
+| Argmax accuracy | 34.7% [23.1, 47.2] | 28.3% [19.2, 39.2] |
+| Majority-vote accuracy (per puzzle) | 13/36 | 7/36 |
+| Templates with the same majority answer across all 4 variants | 4/9 | 1/9 |
+| Sampled accuracy, belief-violating variant | 21.1% | 11.1% |
+| Sampled accuracy, artificial variant | 46.7% | 36.7% |
 
-- `familiar`
-- `belief_violating`
-- `artificial`
-- `abstract`
+Both models are close to chance overall, and both are weakest when the narrative contradicts world knowledge (belief-violating variant). Full per-model summaries are in `results/analysis_qwen3b.txt` and `results/analysis_llama32_3b.txt`; comparative figures are in `figures/behavioral/`.
 
-## Option-letter counterbalancing
+![Accuracy by narrative variant](figures/behavioral/fig_02_sampled_accuracy_by_narrative_variant.png)
 
-The task uses a four-option multiple-choice format with answer letters A/B/C/D. To avoid confounding logical reasoning with positional bias, the assignment of the four labels to the four letters is **not fixed**: each (puzzle, seed) trial draws one of the 24 permutations of `(True, False, Unknown, Paradox)` from a deterministic systematic schedule, giving uniform per-permutation coverage (15 hits each at 36 puzzles x 10 seeds).
+## Repository structure
 
-The per-trial permutation is recorded in the `option_order` column of the results CSV. Letter-level diagnostics (`prob_A`/`prob_B`/`prob_C`/`prob_D`, `logprob_A`/.../`logprob_D`) are saved alongside the label-level columns so positional preference can be inspected independently of label assignment.
-
-## Execution mode
-
-The `src/` directory is a Python package.
-
-All scripts should be run from the repository root using module mode:
-
-```bash
-python -m src.dataset
-python -m src.solvers
-python -m src.run --seeds 10 --temperature 0.7 --top-p 1.0 --tag qwen3b
-python -m src.analyze results/<RESULT_FILE>.csv
+```text
+puzzles/
+  templates.json        9 formal templates: axioms, query, gold label, Z3 verification code
+  puzzles.json          36 narrative variants (9 templates x 4 variants)
+src/                    behavioral pipeline (Python package, run in module mode)
+  dataset.py            loads and validates the benchmark, joins puzzles with templates
+  solvers.py            re-derives every gold label with Z3
+  prompt.py             builds A/B/C/D prompts under a per-trial option permutation
+  model.py              forced-choice answer distribution from any Hugging Face causal LM
+  run.py                runs puzzles x seeds with systematic counterbalancing, writes a CSV
+  analyze.py            accuracy, majority vote, stability, consistency, positional and confidence diagnostics
+analysis/
+  make_behavioral_figures.py   regenerates figures/behavioral/
+  run_benchmark_colab.py       end-to-end record of the Colab workflow
+attention/
+  attention_run.py      attention read at the answer-prediction step, aggregated over annotated spans
+  selected_spans_*.json manual span annotations (region / role / tags) for P04, P05, P07, P08, P09
+results/                final behavioral CSVs and per-model text summaries
+figures/behavioral/     behavioral figures (see its README)
+attention_outputs/      per-template attention outputs (JSON, aggregated CSVs, figures)
+docs/reproducibility.md commands to regenerate every committed artifact
 ```
-
-Do not run scripts as:
-
-```bash
-python src/run.py
-```
-
-because the project uses package-relative imports.
 
 ## Setup
 
-Install dependencies:
+Python 3.10 or later.
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Required packages:
+All `src` scripts must be run from the repository root in module mode (`python -m src.run`), because the package uses relative imports.
 
-- `torch`
-- `transformers`
-- `z3-solver`
+`meta-llama/Llama-3.2-3B-Instruct` is gated: accept its license on Hugging Face and authenticate (`huggingface-cli login` or the `HF_TOKEN` environment variable) before running it. Full runs require a GPU.
 
-## Validation
+## Usage
 
-Before running the model, validate the dataset and formal labels:
+Validate the dataset and the formal labels (CPU, a few seconds):
 
 ```bash
-python -m src.dataset
-python -m src.solvers
+python -m src.dataset   # should load 36 puzzles
+python -m src.solvers   # all 9 declared gold labels must match Z3
 ```
 
-Expected checks:
-
-- `dataset.py` should load 36 puzzles
-- `solvers.py` should confirm that all 9 declared gold labels match the Z3 results
-
-## Running experiments
-
-A small smoke test:
-
-```bash
-python -m src.run --seeds 2 --temperature 0.7 --top-p 1.0 --tag smoke
-```
-
-Full run on Qwen-2.5-3B-Instruct (default model):
+Run the behavioral benchmark:
 
 ```bash
 python -m src.run --model-name Qwen/Qwen2.5-3B-Instruct --seeds 10 --temperature 0.7 --top-p 1.0 --tag qwen3b
-```
-
-Full run on Llama-3.2-3B-Instruct:
-
-```bash
 python -m src.run --model-name meta-llama/Llama-3.2-3B-Instruct --seeds 10 --temperature 0.7 --top-p 1.0 --tag llama32_3b
 ```
 
-`--model-name` accepts any Hugging Face causal-LM repo id. Gated models (notably the `meta-llama/*` family) require accepting the license on the model's Hugging Face page and authenticating with an HF token (`huggingface-cli login` or `HF_TOKEN` env var) before they can be downloaded.
-
-Results are saved in:
-
-```text
-results/
-```
-
-## Analyzing results
-
-After generating a CSV file:
+Analyze a results CSV and regenerate the figures:
 
 ```bash
 python -m src.analyze results/<RESULT_FILE>.csv
+python analysis/make_behavioral_figures.py
 ```
 
-The analysis reports:
+Run the attention analysis for one template (example: P04):
 
-- invalid-output sanity check
-- sampled per-run accuracy
-- argmax per-run accuracy
-- positional diagnostics: chosen-letter distribution, mean letter-level probability, accuracy by chosen letter, accuracy by gold-label position, distinct-permutation count
-- accuracy by variant type
-- accuracy by template and category
-- majority-vote accuracy per puzzle
-- response stability across seeds (under counterbalancing, this also captures robustness to option-letter permutation)
-- cross-variant consistency on majority predictions
-- confidence and entropy diagnostics
-- cluster bootstrap confidence intervals
-- paired variant deltas
+```bash
+python attention/attention_run.py \
+  --template-id P04 \
+  --models qwen llama \
+  --qwen-csv results/results_qwen3b_T0.7_topP1.0_n10_20260513_114931.csv \
+  --llama-csv results/results_llama32_3b_T0.7_topP1.0_n10_20260513_154349.csv \
+  --spans-json attention/selected_spans_P04.json \
+  --last-n-layers 4 \
+  --output-dir attention_outputs/P04
+```
 
-## Reproducibility and final artifacts
+See [`docs/reproducibility.md`](docs/reproducibility.md) for the exact commands behind every committed file.
 
-The final behavioral CSVs for Qwen-2.5-3B-Instruct and Llama-3.2-3B-Instruct
-are committed under `results/`, the per-model text summaries are
-`results/analysis_qwen3b.txt` and `results/analysis_llama32_3b.txt`, and the
-comparative figures live in `figures/behavioral/`. See
-[`docs/reproducibility.md`](docs/reproducibility.md) for the regeneration
-commands. Re-running the benchmark from scratch is documented in
-`analysis/run_benchmark_colab.py`; note that Llama is gated and requires a
-Hugging Face token.
+## Method notes
 
-## Methodological note
+**Forced choice.** The answer distribution is read from the next-token logits at the answer step, aggregated over tokenization variants of each option letter and renormalized over A/B/C/D. Reported probabilities are temperature-scaled (T = 0.7), i.e. they describe the same distribution the sampled answer is drawn from. `max_prob` and `entropy_nats` are option-level diagnostics, not model-level uncertainty estimates.
 
-This project is a small controlled diagnostic dataset, not a broad benchmark of logical reasoning.
+**Counterbalancing.** For each (puzzle, seed) trial the mapping of the four labels to A/B/C/D is drawn from a deterministic schedule over all 24 permutations, with uniform coverage overall (15 trials per permutation). Coverage is not balanced within each puzzle: each puzzle sees 10 consecutive permutations, so the correct answer can sit on the same letter in up to 6 of its 10 trials. Per-puzzle measures (majority vote, stability, cross-variant consistency) should be read with this in mind.
 
-The goal is to test whether a model preserves the same formal judgment across different narrative variants of the same logical template, while controlling for option-letter positional bias.
+**Attention.** Attention is averaged over heads and the last 4 layers, read at the last prompt token, and aggregated over manually annotated spans. It is a descriptive, correlational diagnostic and is not interpreted as a causal explanation of the answer. `attention_mean_per_token` is the primary cross-variant measure; `attention_sum` scales with span length and is reported only descriptively.
 
-For each (puzzle, seed) trial, the pipeline records:
+**Scope.** This is a small controlled diagnostic dataset, not a broad benchmark of logical reasoning.
 
-- `option_order`: the per-trial permutation of `(True, False, Unknown, Paradox)` assigned to A/B/C/D
-- `sampled_letter` / `sampled_label`: the option letter sampled from the model distribution and the label it maps to under `option_order`
-- `argmax_letter` / `argmax_label`: the most probable letter according to the same distribution and the label it maps to
-- label-level probabilities (`prob_True`, `prob_False`, `prob_Unknown`, `prob_Paradox`) for logical analysis
-- letter-level probabilities (`prob_A`, `prob_B`, `prob_C`, `prob_D`) for positional-bias analysis
+## Citation
 
-`max_prob` and `entropy_nats` are computed over the four-label distribution and are used only as forced-choice option-level diagnostics, not as model-level uncertainty measures.
+```bibtex
+@inproceedings{santoro2026content,
+  author    = {Santoro, Emmanuel Giuseppe and Pe{\~n}aloza, Rafael},
+  title     = {When Content Overrides Form: Diagnosing Logical Failures in Small Instruction-Tuned Language Models},
+  booktitle = {Proceedings of the Workshop on Foundations of Neuro-Symbolic Logical Reasoning (FOUSY 2026)},
+  series    = {CEUR Workshop Proceedings},
+  year      = {2026},
+  note      = {To appear}
+}
+```
 
-Decoding defaults are `temperature=0.7` and `top_p=1.0`. Top-p is set to 1.0 (no truncation) because the four-label answer space is not a long-tailed vocabulary: a lower-probability option such as `Unknown` or `Paradox` typically carries meaningful signal rather than vocabulary noise, and `sampled_label` should be drawn from the same posterior that the reported `prob_*` columns describe.
+## AI assistance
+
+Parts of the code in this repository were written with AI coding assistants (Claude, Codex, Copilot), as visible in the commit history. Research design, puzzle construction, annotation and interpretation of results are the author's.
+
+## License
+
+Code: MIT. Puzzle data (`puzzles/`) and span annotations (`attention/selected_spans_*.json`): CC BY 4.0. See `LICENSE`.
