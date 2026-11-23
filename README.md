@@ -111,9 +111,16 @@ See [`docs/reproducibility.md`](docs/reproducibility.md) for the exact commands 
 
 **Scope.** This is a small controlled diagnostic dataset, not a broad benchmark of logical reasoning.
 
-## Citation
+## Citations
 
 ```bibtex
+@mastersthesis{santoro2026content,
+  author    = {Santoro, Emmanuel Giuseppe},
+  title     = {Logical Reasoning and Failure Diagnostics in Small Instruction-Tuned Language Models},
+  school    = {University of Milan},
+  type      = {Master's Thesis},
+  year      = {2026},
+}
 @inproceedings{santoro2026content,
   author    = {Santoro, Emmanuel Giuseppe and Pe{\~n}aloza, Rafael},
   title     = {When Content Overrides Form: Diagnosing Logical Failures in Small Instruction-Tuned Language Models},
@@ -123,6 +130,7 @@ See [`docs/reproducibility.md`](docs/reproducibility.md) for the exact commands 
   note      = {To appear}
 }
 ```
+
 
 ## AI assistance
 
